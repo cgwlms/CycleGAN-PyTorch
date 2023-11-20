@@ -29,6 +29,7 @@ def main(args):
     # Load image
     image = preprocess_one_image(args.inputs_path, True, args.half, device)
 
+
     # Load model weights
     g_model = load_pretrained_state_dict(g_model, False, args.model_weights_path)
     g_model.eval()
@@ -41,14 +42,14 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--inputs_path", type=str, default="./figure/apple.jpg",
-                        help="Input image path. Default: ``./figure/apple.jpg``")
-    parser.add_argument("--output_path", type=str, default="./figure/fake_orange.jpg",
-                        help="Output image path. Default: ``./figure/fake_orange.jpg``")
+    parser.add_argument("--inputs_path", type=str, default="./figure/13001_0_1_15.png",
+                        help="Input image path. Default: ``./figure/13001_0_1_15.png``")
+    parser.add_argument("--output_path", type=str, default="./figure/fake_orange1.jpg",
+                        help="Output image path. Default: ``./figure/fake_orange1.jpg``")
     parser.add_argument("--model_arch_name", type=str, default="cyclenet",
                         help="Generator arch model name.  Default: ``cyclenet``")
     parser.add_argument("--model_weights_path", type=str,
-                        default="./results/pretrained_models/CycleGAN-apple2orange.pth.tar",
+                        default="./results/CycleGAN-DCI/g_A_best.pth.tar",
                         help="Generator model weights path.  Default: ``./results/pretrained_models/CycleGAN-apple2orange.pth.tar``")
     parser.add_argument("--half", action="store_true", default=False,
                         help="Use half precision. Default: ``False``")

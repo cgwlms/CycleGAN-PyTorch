@@ -36,7 +36,7 @@ from imgproc import random_crop_torch, random_rotate_torch, random_vertically_fl
 from utils import load_pretrained_state_dict, load_resume_state_dict, make_directory, save_checkpoint, DecayLR, \
     ReplayBuffer, Summary, AverageMeter, ProgressMeter
 
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 def main():
     # Read parameters from configuration file
     parser = argparse.ArgumentParser()
@@ -280,6 +280,14 @@ def build_model(
         ema_g_A_model = None
         ema_g_B_model = None
 
+    if True:
+        g_A_model = nn.DataParallel(g_A_model, device_ids=[0, 1])
+        g_B_model = nn.DataParallel(g_B_model, device_ids=[0, 1])
+        ema_g_A_model = nn.DataParallel(ema_g_A_model, device_ids=[0, 1])
+        ema_g_B_model = nn.DataParallel(ema_g_B_model, device_ids=[0, 1])
+        d_A_model = nn.DataParallel(d_A_model, device_ids=[0, 1])
+        d_B_model = nn.DataParallel(d_B_model, device_ids=[0, 1])
+    num_gpus = torch.cuda.device_count()
     g_A_model = g_A_model.to(device)
     g_B_model = g_B_model.to(device)
     ema_g_A_model = ema_g_A_model.to(device)
@@ -449,23 +457,24 @@ def train(
             # Identity loss
             identity_image_A = g_A_model(real_image_B)
             loss_identity_A = torch.sum(torch.mul(identity_weight, identity_criterion(identity_image_A, real_image_B)))
-            identity_image_B = g_B_model(real_image_A)
-            loss_identity_B = torch.sum(torch.mul(identity_weight, identity_criterion(identity_image_B, real_image_A)))
+            #identity_image_B = g_B_model(real_image_A)
+            #loss_identity_B = torch.sum(torch.mul(identity_weight, identity_criterion(identity_image_B, real_image_A)))
 
             # GAN loss
             fake_output_A = d_A_model(fake_image_B)
             real_label = torch.tensor(1).expand_as(fake_output_A).to(device, non_blocking=True)
             loss_adversarial_A = torch.sum(torch.mul(adversarial_weight, adversarial_criterion(fake_output_A, real_label)))
-            fake_output_B = d_B_model(fake_image_A)
-            real_label = torch.tensor(1).expand_as(fake_output_B).to(device, non_blocking=True)
-            loss_adversarial_B = torch.sum(torch.mul(adversarial_weight, adversarial_criterion(fake_output_B, real_label)))
+            #fake_output_B = d_B_model(fake_image_A)
+            #real_label = torch.tensor(1).expand_as(fake_output_B).to(device, non_blocking=True)
+            #loss_adversarial_B = torch.sum(torch.mul(adversarial_weight, adversarial_criterion(fake_output_B, real_label)))
 
             # Cycle loss
             loss_cycle_A = torch.sum(torch.mul(cycle_weight, cycle_criterion(recovered_image_A, real_image_A)))
-            loss_cycle_B = torch.sum(torch.mul(cycle_weight, cycle_criterion(recovered_image_B, real_image_B)))
+            #loss_cycle_B = torch.sum(torch.mul(cycle_weight, cycle_criterion(recovered_image_B, real_image_B)))
 
             # Combined loss and calculate gradients
-            g_loss = loss_identity_A + loss_identity_B + loss_adversarial_A + loss_adversarial_B + loss_cycle_A + loss_cycle_B
+            #g_loss = loss_identity_A + loss_identity_B + loss_adversarial_A + loss_adversarial_B + loss_cycle_A + loss_cycle_B
+            g_loss = loss_identity_A + loss_adversarial_A + loss_cycle_A
 
         # Backpropagation
         scaler.scale(g_loss).backward()
@@ -474,11 +483,11 @@ def train(
         scaler.update()
 
         # Update EMA
-        ema_g_A_model.update_parameters(g_A_model)
-        ema_g_B_model.update_parameters(g_B_model)
+        ema_g_A_model.module.update_parameters(g_A_model.module)
+        #ema_g_B_model.module.update_parameters(g_B_model.module)
 
         fake_image_A = fake_A_buffer.push_and_pop(fake_image_A)
-        fake_image_B = fake_B_buffer.push_and_pop(fake_image_B)
+        #fake_image_B = fake_B_buffer.push_and_pop(fake_image_B)
 
         ##############################################
         # (2) Update D network: Discriminator A
@@ -517,32 +526,33 @@ def train(
         d_optimizer.zero_grad(set_to_none=True)
 
         # During discriminator model training, enable discriminator model backpropagation
-        for d_parameters in d_B_model.parameters():
-            d_parameters.requires_grad = True
+        #for d_parameters in d_B_model.parameters():
+        #    d_parameters.requires_grad = True
 
         # Mixed precision training
-        with amp.autocast():
-            # Real B image loss
-            real_output_B = d_B_model(real_image_A)
-            real_label = torch.tensor(1).expand_as(real_output_B).to(device, non_blocking=True)
-            loss_real_B = adversarial_criterion(real_output_B, real_label)
+        if False:
+            with amp.autocast() :
+                # Real B image loss
+                real_output_B = d_B_model(real_image_A)
+                real_label = torch.tensor(1).expand_as(real_output_B).to(device, non_blocking=True)
+                loss_real_B = adversarial_criterion(real_output_B, real_label)
 
-            # Fake B image loss
-            fake_output_B = d_B_model(fake_image_A.detach())
-            fake_label = torch.tensor(0).expand_as(fake_output_B).to(device, non_blocking=True)
-            loss_fake_B = adversarial_criterion(fake_output_B, fake_label)
+                # Fake B image loss
+                fake_output_B = d_B_model(fake_image_A.detach())
+                fake_label = torch.tensor(0).expand_as(fake_output_B).to(device, non_blocking=True)
+                loss_fake_B = adversarial_criterion(fake_output_B, fake_label)
 
-            # Combined loss and calculate gradients
-            loss_d_B = torch.div(torch.add(loss_real_B, loss_fake_B), 2)
+                # Combined loss and calculate gradients
+                loss_d_B = torch.div(torch.add(loss_real_B, loss_fake_B), 2)
 
         # Backpropagation
-        scaler.scale(loss_d_B).backward()
+        #scaler.scale(loss_d_B).backward()
         # update generator weights
-        scaler.step(d_optimizer)
-        scaler.update()
+        #scaler.step(d_optimizer)
+        #scaler.update()
 
         # Statistical loss value for terminal data output
-        d_losses.update((loss_d_A + loss_d_B).item(), batch_size)
+        d_losses.update((loss_d_A).item(), batch_size)
         g_losses.update(g_loss.item(), batch_size)
 
         # Calculate the time it takes to fully train a batch of data
@@ -555,11 +565,11 @@ def train(
 
             # Record loss during training and output to file
             writer.add_scalar("Train/D(A)_Loss", loss_d_A.item(), total_batch_index)
-            writer.add_scalar("Train/D(B)_Loss", loss_d_B.item(), total_batch_index)
-            writer.add_scalar("Train/D_Loss", (loss_d_A + loss_d_B).item(), total_batch_index)
-            writer.add_scalar("Train/Identity_Loss", (loss_identity_A + loss_identity_B).item(), total_batch_index)
-            writer.add_scalar("Train/Adversarial_Loss", (loss_adversarial_B + loss_adversarial_A).item(), total_batch_index)
-            writer.add_scalar("Train/Cycle_Loss", (loss_cycle_A + loss_cycle_B).item(), total_batch_index)
+            #writer.add_scalar("Train/D(B)_Loss", loss_d_B.item(), total_batch_index)
+            #writer.add_scalar("Train/D_Loss", (loss_d_A + loss_d_B).item(), total_batch_index)
+            writer.add_scalar("Train/Identity_Loss", (loss_identity_A).item(), total_batch_index)
+            writer.add_scalar("Train/Adversarial_Loss", (loss_adversarial_A).item(), total_batch_index)
+            writer.add_scalar("Train/Cycle_Loss", (loss_cycle_A).item(), total_batch_index)
             writer.add_scalar("Train/G_Loss", g_loss.item(), total_batch_index)
             progress.display(batch_index + 1)
 

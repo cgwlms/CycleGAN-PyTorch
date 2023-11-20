@@ -39,14 +39,56 @@ class ImageDataset(Dataset):
             resized_image_size: int,
     ) -> None:
         super(ImageDataset, self).__init__()
-        self.src_image_file_names = [os.path.join(src_images_dir, image_file_name) for image_file_name in
-                                     os.listdir(src_images_dir)]
-        self.dst_image_file_names = [os.path.join(dst_images_dir, image_file_name) for image_file_name in
-                                     os.listdir(dst_images_dir)]
+
+        if False:
+            self.src_image_file_names = [os.path.join(src_images_dir, image_file_name) for image_file_name in
+                                         os.listdir(src_images_dir)]
+            self.dst_image_file_names = [os.path.join(dst_images_dir, image_file_name) for image_file_name in
+                                         os.listdir(dst_images_dir)]
+        else:
+            self.src_image_file_names = self.get_oct_image(src_images_dir)
+            self.dst_image_file_names = self.get_png_image(dst_images_dir)
         self.unpaired = unpaired
         self.resized_image_size = resized_image_size
 
-    def __getitem__(self, batch_index: int) -> [dict[str, Tensor], dict[str, Tensor]]:
+    def get_png_image(self, images_root_dir):
+        src_image_file_names = []
+        # src_images_root_dir = 'D:\\workspace\\fd\\images'
+        for src_images_name in os.listdir(images_root_dir):
+            src_images_dir = os.path.join(images_root_dir, src_images_name)
+            if os.path.isfile(src_images_dir):
+                continue
+            # src_images_dir = 'D:\\workspace\\fd\\images\\1801'  # 存放 TIFF 图像的文件夹
+
+            path = os.path.join(src_images_dir, "split")
+            for folder_name in os.listdir(path):
+                path1 = os.path.join(path, folder_name)
+                if os.path.isfile(path1):
+                    src_image_file_names.append(path1)
+                    continue
+                for file_name in os.listdir(path1):
+                    path2 = os.path.join(path1, file_name)
+                    src_image_file_names.append(path2)
+        length = len(src_image_file_names)
+        print("png len=" + str(length))
+        return src_image_file_names
+
+    def get_oct_image(self, images_root_dir):
+        src_image_file_names = []
+        # src_images_root_dir = 'D:\\workspace\\fd\\images'
+        for src_images_name in os.listdir(images_root_dir):
+            src_images_dir = os.path.join(images_root_dir, src_images_name)
+            if os.path.isfile(src_images_dir):
+                continue
+            for folder_name in os.listdir(src_images_dir):
+                path1 = os.path.join(src_images_dir, folder_name)
+                src_image_file_names.append(path1)
+
+        length = len(src_image_file_names)
+        print("oct len=" + str(length))
+        return src_image_file_names
+
+    def __getitem__(self, batch_index: int):
         # Read a batch of image data
         src_image = cv2.imread(self.src_image_file_names[batch_index])
         if self.unpaired:
@@ -54,6 +96,8 @@ class ImageDataset(Dataset):
         else:
             dst_image = cv2.imread(self.dst_image_file_names[batch_index])
 
+        if src_image is None or dst_image is None:
+            ss = ""
         # Normalize the image data
         src_image = src_image.astype(np.float32) / 255.
         dst_image = dst_image.astype(np.float32) / 255.

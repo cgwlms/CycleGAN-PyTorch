@@ -40,7 +40,7 @@ def main(args):
     model_weights_list = natsorted(glob(f"{args.model_weights_dir}/{args.model_type}*"))
     for model_weights in model_weights_list:
         print(f"Process `{model_weights}`...")
-        g_model = load_pretrained_state_dict(g_model, model_weights)
+        g_model = load_pretrained_state_dict(g_model, "_orig_mod", model_weights)
         g_model.eval()
 
         with torch.no_grad():
@@ -52,8 +52,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_path", type=str, default="./figure/apple.jpg",
-                        help="Input image path. Default: ``./figure/apple.jpg``")
+    parser.add_argument("--image_path", type=str, default="./figure/13001_0_1_15.png",
+                        help="Input image path. Default: ``./figure/13001_0_1_15.png``")
     parser.add_argument("--model_arch_name", type=str, default="cyclenet",
                         help="Generator arch model name.  Default: ``cyclenet``")
     parser.add_argument("--model_weights_dir", type=str, default="./samples/CycleGAN-apple2orange",

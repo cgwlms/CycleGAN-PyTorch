@@ -150,7 +150,7 @@ def path_discriminator(**kwargs) -> PathDiscriminator:
 
 
 def cyclenet(**kwargs) -> CycleNet:
-    model = CycleNet(**kwargs)
+    model = CycleNet(in_channels=3, out_channels=3, channels=64)
     model.apply(_weights_init)
 
     return model

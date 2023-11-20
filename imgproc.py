@@ -89,6 +89,9 @@ def preprocess_one_image(image_path: str, range_norm: bool, half: bool, device: 
     # read an image using OpenCV
     image = cv2.imread(image_path).astype(np.float32) / 255.0
 
+    resized_image_size = 1024
+
+    image = cv2.resize(image, (resized_image_size, resized_image_size), interpolation=cv2.INTER_CUBIC)
     # BGR image channel data to RGB image channel data
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -102,8 +105,8 @@ def preprocess_one_image(image_path: str, range_norm: bool, half: bool, device: 
 
 
 def center_crop_torch(
-        src_images: ndarray | Tensor | list[ndarray] | list[Tensor],
-        dst_images: ndarray | Tensor | list[ndarray] | list[Tensor],
+        src_images: ndarray or Tensor or list[ndarray] or list[Tensor],
+        dst_images: ndarray or Tensor or list[ndarray] or list[Tensor],
         patch_size: int,
 ) -> [ndarray, ndarray] or [Tensor, Tensor] or [list[ndarray], list[ndarray]] or [list[Tensor], list[Tensor]]:
     """Intercept two images to specify the center area
@@ -173,8 +176,8 @@ def center_crop_torch(
 
 
 def random_crop_torch(
-        src_images: ndarray | Tensor | list[ndarray] | list[Tensor],
-        dst_images: ndarray | Tensor | list[ndarray] | list[Tensor],
+        src_images: ndarray or Tensor or list[ndarray] or list[Tensor],
+        dst_images: ndarray or Tensor or list[ndarray] or list[Tensor],
         patch_size: int,
 ) -> [ndarray, ndarray] or [Tensor, Tensor] or [list[ndarray], list[ndarray]] or [list[Tensor], list[Tensor]]:
     """Randomly intercept two images in the specified area
@@ -246,8 +249,8 @@ def random_crop_torch(
 
 
 def random_rotate_torch(
-        src_images: ndarray | Tensor | list[ndarray] | list[Tensor],
-        dst_images: ndarray | Tensor | list[ndarray] | list[Tensor],
+        src_images: ndarray or Tensor or list[ndarray] or list[Tensor],
+        dst_images: ndarray or Tensor or list[ndarray] or list[Tensor],
         angles: list,
         center: tuple = None,
         rotate_scale_factor: float = 1.0
@@ -310,8 +313,8 @@ def random_rotate_torch(
 
 
 def random_horizontally_flip_torch(
-        src_images: ndarray | Tensor | list[ndarray] | list[Tensor],
-        dst_images: ndarray | Tensor | list[ndarray] | list[Tensor],
+        src_images: ndarray or Tensor or list[ndarray] or list[Tensor],
+        dst_images: ndarray or Tensor or list[ndarray] or list[Tensor],
         p: float = 0.5
 ) -> [ndarray, ndarray] or [Tensor, Tensor] or [list[ndarray], list[ndarray]] or [list[Tensor], list[Tensor]]:
     """Randomly flip the image up and down
@@ -360,8 +363,8 @@ def random_horizontally_flip_torch(
 
 
 def random_vertically_flip_torch(
-        src_images: ndarray | Tensor | list[ndarray] | list[Tensor],
-        dst_images: ndarray | Tensor | list[ndarray] | list[Tensor],
+        src_images: ndarray or Tensor or list[ndarray] or list[Tensor],
+        dst_images: ndarray or Tensor or list[ndarray] or list[Tensor],
         p: float = 0.5
 ) -> [ndarray, ndarray] or [Tensor, Tensor] or [list[ndarray], list[ndarray]] or [list[Tensor], list[Tensor]]:
     """Randomly flip the image left and right

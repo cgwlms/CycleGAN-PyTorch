@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import os
+import os, time, logging
 import random
 import shutil
 from collections import OrderedDict
@@ -47,7 +47,7 @@ def load_state_dict(
     """
 
     # Define compilation status keywords
-    compile_state = "_orig_mod"
+    compile_state = "module"
 
     # Process parameter dictionary
     model_state_dict = model.state_dict()
@@ -104,12 +104,12 @@ def load_pretrained_state_dict(
 
 def load_resume_state_dict(
         model: nn.Module,
-        ema_model: nn.Module | None,
+        ema_model: nn.Module or None,
         optimizer: Optimizer,
         scheduler: Any,
         compile_state: bool,
         model_weights_path: str,
-) -> tuple[Any, Module | None | Any, Any, Optimizer, Any] | tuple[Any, Module | None | Any, Any, Optimizer]:
+):
     """Restore training model weights
 
     Args:
@@ -259,11 +259,13 @@ class ProgressMeter(object):
 
     def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
+        entries += ["[" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "]"]
         entries += [str(meter) for meter in self.meters]
         print("\t".join(entries))
 
     def display_summary(self):
         entries = [" *"]
+        entries += ["[" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "]"]
         entries += [meter.summary() for meter in self.meters]
         print(" ".join(entries))
 
